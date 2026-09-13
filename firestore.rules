@@ -52,6 +52,11 @@ service cloud.firestore {
       allow create: if isOwnedCreate();
     }
 
+    match /scope/{scopeItemId} {
+      allow read, update, delete: if isOwnedDoc();
+      allow create: if isOwnedCreate();
+    }
+
     match /findings/{findingId} {
       allow read, update, delete: if isOwnedDoc();
       allow create: if isOwnedCreate();

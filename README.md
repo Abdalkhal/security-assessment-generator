@@ -201,7 +201,8 @@ Being built incrementally. Current stage:
       email/password authentication (Splash, Login, Register, Forgot Password)
 - [x] **Stage 2** — Dashboard (stats, risk overview, recent activity), Clients
       (create/edit/delete/view, search, assessment count)
-- [ ] **Stage 3** — Assessments, Assessment Details, Scope, Assets
+- [x] **Stage 3** — Assessments (create/edit/delete/view, search, status filter),
+      Assessment Details (Overview/Scope/Assets tabs), Scope items, Assets
 - [ ] **Stage 4** — Findings, Finding Details, Finding Library
 - [ ] **Stage 5** — Evidence, Firebase Storage, Report Preview
 - [ ] **Stage 6** — PDF generation, Report History, Sharing, Profile, UI polish

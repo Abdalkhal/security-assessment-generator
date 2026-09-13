@@ -1,5 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { AssessmentDetailScreen } from '../screens/assessments/AssessmentDetailScreen';
+import { AssessmentFormScreen } from '../screens/assessments/AssessmentFormScreen';
 import { AssessmentsListScreen } from '../screens/assessments/AssessmentsListScreen';
 import { colors } from '../theme';
 import { AssessmentsStackParamList } from './types';
@@ -12,6 +14,8 @@ export function AssessmentsStackNavigator() {
       screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
     >
       <Stack.Screen name="AssessmentsList" component={AssessmentsListScreen} />
+      <Stack.Screen name="AssessmentDetail" component={AssessmentDetailScreen} />
+      <Stack.Screen name="AssessmentForm" component={AssessmentFormScreen} />
     </Stack.Navigator>
   );
 }

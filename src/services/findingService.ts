@@ -14,3 +14,16 @@ export async function getFindings(ownerId: string): Promise<Finding[]> {
     (a, b) => (b.updatedAt?.toMillis?.() ?? 0) - (a.updatedAt?.toMillis?.() ?? 0)
   );
 }
+
+export async function getFindingsForAssessment(ownerId: string, assessmentId: string): Promise<Finding[]> {
+  const q = query(
+    collection(db, FINDINGS_COLLECTION),
+    where('ownerId', '==', ownerId),
+    where('assessmentId', '==', assessmentId)
+  );
+  const snapshot = await getDocs(q);
+  const findings = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Finding);
+  return findings.sort(
+    (a, b) => (b.updatedAt?.toMillis?.() ?? 0) - (a.updatedAt?.toMillis?.() ?? 0)
+  );
+}
