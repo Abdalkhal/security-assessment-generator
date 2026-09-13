@@ -19,12 +19,20 @@ service cloud.firestore {
     }
 
     // For top-level owned collections (clients, assessments, assets,
-    // findings, reports): the document must carry ownerId == caller's uid,
-    // both on the existing document (for read/update/delete) and on the
-    // incoming data (for create), so a user can never read someone else's
-    // document or create one on another user's behalf.
-    function isOwnedDoc() {
+    // findings, reports): the document must carry ownerId == caller's uid.
+    // isOwnedRead covers read/delete (only today's owner matters).
+    // isOwnedUpdate additionally requires the incoming write to keep the
+    // same ownerId, so a user can never reassign one of their documents to
+    // another uid (which would otherwise be a harmless-looking but
+    // unnecessary way to mutate ownership metadata).
+    // isOwnedCreate requires the new document's ownerId to match the
+    // caller, so nobody can create data on another user's behalf.
+    function isOwnedRead() {
       return isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    function isOwnedUpdate() {
+      return isOwnedRead() && request.resource.data.ownerId == resource.data.ownerId;
     }
 
     function isOwnedCreate() {
@@ -32,43 +40,58 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, update: if isOwner(userId);
+      allow read: if isOwner(userId);
       allow create: if isOwner(userId);
+      // uid/email/plan are not client-editable - the profile form only
+      // ever sends name/company/phone/website, and this keeps it that way
+      // even if called directly rather than through the app (e.g. no
+      // client-side way to self-upgrade plan once paid tiers exist).
+      allow update: if isOwner(userId)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.plan == resource.data.plan;
       allow delete: if false;
     }
 
     match /clients/{clientId} {
-      allow read, update, delete: if isOwnedDoc();
+      allow read, delete: if isOwnedRead();
+      allow update: if isOwnedUpdate();
       allow create: if isOwnedCreate();
     }
 
     match /assessments/{assessmentId} {
-      allow read, update, delete: if isOwnedDoc();
+      allow read, delete: if isOwnedRead();
+      allow update: if isOwnedUpdate();
       allow create: if isOwnedCreate();
     }
 
     match /assets/{assetId} {
-      allow read, update, delete: if isOwnedDoc();
+      allow read, delete: if isOwnedRead();
+      allow update: if isOwnedUpdate();
       allow create: if isOwnedCreate();
     }
 
     match /scope/{scopeItemId} {
-      allow read, update, delete: if isOwnedDoc();
+      allow read, delete: if isOwnedRead();
+      allow update: if isOwnedUpdate();
       allow create: if isOwnedCreate();
     }
 
     match /findings/{findingId} {
-      allow read, update, delete: if isOwnedDoc();
+      allow read, delete: if isOwnedRead();
+      allow update: if isOwnedUpdate();
       allow create: if isOwnedCreate();
     }
 
     match /evidence/{evidenceId} {
-      allow read, update, delete: if isOwnedDoc();
+      allow read, delete: if isOwnedRead();
+      allow update: if isOwnedUpdate();
       allow create: if isOwnedCreate();
     }
 
     match /reports/{reportId} {
-      allow read, update, delete: if isOwnedDoc();
+      allow read, delete: if isOwnedRead();
+      allow update: if isOwnedUpdate();
       allow create: if isOwnedCreate();
     }
 

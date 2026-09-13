@@ -149,9 +149,11 @@ npm start               # opens Expo dev tools; scan the QR code with Expo Go on
 Useful scripts:
 
 ```bash
-npm run android   # start Metro and open on a connected device/emulator
+npm run android    # start Metro and open on a connected device/emulator
 npm run web        # run in a browser (useful for a quick UI smoke test; not the target platform)
 npx tsc --noEmit   # type-check
+npm test           # run unit tests (Jest)
+npx expo-doctor    # check for common Expo project misconfigurations
 ```
 
 ## Android Build
@@ -212,4 +214,16 @@ Being built incrementally. Current stage:
       Storage, Report Preview
 - [x] **Stage 6** — On-device PDF generation and native share sheet,
       Report History, Profile (report letterhead settings)
-- [ ] **Stage 7** — Security rule hardening, testing, production build prep
+- [x] **Stage 7** — Security rule hardening (ownerId immutable on update,
+      users/plan locked from client writes), unit tests for pure report/risk
+      logic, `expo-doctor` clean (21/21), EAS build profiles
+
+All seven stages of the planned MVP are now in place. What's left before a
+real user can walk the full golden path is **connecting a real Firebase
+project** (see [Firebase Setup](#firebase-setup)) — every screen, security
+rule, and service function is implemented and type-checks cleanly, but has
+only been exercised against a placeholder project in this environment
+(no Android SDK/emulator was available in this environment; see
+[Local Development](#local-development)). Test thoroughly against your own
+Firebase project and a real Android device (via Expo Go) before relying on
+this for actual client engagements.

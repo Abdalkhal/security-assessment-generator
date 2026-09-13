@@ -40,7 +40,8 @@
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to capture evidence photos."
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-font"
     ]
   }
 }

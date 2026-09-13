@@ -9,25 +9,8 @@ import { createReportRecord } from './reportService';
 import { getScopeItems } from './scopeService';
 import { getUserProfile } from './userService';
 import { countBySeverity, getOverallRisk } from '../utils/risk';
+import { escapeHtml, nl2br } from '../utils/html';
 import { Evidence, Finding } from '../types';
-
-// Escapes user-entered text before it is embedded in the report HTML.
-// The generated document is rendered in a WebView to produce the PDF, so
-// unescaped input could break the layout or inject markup - this keeps
-// every field (title, description, notes, etc.) treated as plain text.
-function escapeHtml(value: string | number | null | undefined): string {
-  if (value == null) return '';
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function nl2br(value: string): string {
-  return escapeHtml(value).replace(/\n/g, '<br/>');
-}
 
 async function buildFindingHtml(finding: Finding, evidence: Evidence[]): Promise<string> {
   const statusMeta = FINDING_STATUS_META[finding.status];

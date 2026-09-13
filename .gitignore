@@ -46,6 +46,9 @@ GoogleService-Info.plist
 # typescript
 *.tsbuildinfo
 
+# test coverage
+coverage/
+
 # generated native folders
 /ios
 /android
