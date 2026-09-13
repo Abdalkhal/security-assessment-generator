@@ -7,6 +7,7 @@ export type AuthStackParamList = {
 
 export type DashboardStackParamList = {
   Dashboard: undefined;
+  Profile: undefined;
 };
 
 export type ClientsStackParamList = {

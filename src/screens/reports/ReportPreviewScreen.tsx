@@ -16,6 +16,7 @@ import { FINDING_STATUS_META } from '../../constants/findingStatus';
 import { useAuth } from '../../context/AuthContext';
 import { getAssessment } from '../../services/assessmentService';
 import { getFindingsForAssessment } from '../../services/findingService';
+import { generateAssessmentReportPdf } from '../../services/pdfService';
 import { getScopeItems } from '../../services/scopeService';
 import { colors, radius, spacing, typography } from '../../theme';
 import { Assessment, Finding, ScopeItem } from '../../types';
@@ -33,6 +34,8 @@ export function ReportPreviewScreen({ navigation, route }: Props) {
   const [scopeItems, setScopeItems] = useState<ScopeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState('');
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -59,6 +62,19 @@ export function ReportPreviewScreen({ navigation, route }: Props) {
       load();
     }, [load])
   );
+
+  const handleGeneratePdf = async () => {
+    if (!user) return;
+    setGenerateError('');
+    setGenerating(true);
+    try {
+      await generateAssessmentReportPdf(user.uid, assessmentId);
+    } catch {
+      setGenerateError('Unable to generate PDF. Please try again.');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const severityCounts = useMemo(() => countBySeverity(findings), [findings]);
   const overallRisk = useMemo(() => getOverallRisk(findings), [findings]);
@@ -206,15 +222,20 @@ export function ReportPreviewScreen({ navigation, route }: Props) {
           </Text>
         </View>
 
+        {!!generateError && <Text style={styles.generateErrorText}>{generateError}</Text>}
         <View style={styles.actions}>
           <SecondaryButton
             label="Edit Assessment"
             onPress={() => navigation.navigate('AssessmentForm', { assessmentId })}
             style={styles.actionButton}
           />
-          <PrimaryButton label="Generate PDF" onPress={() => {}} disabled style={styles.actionButton} />
+          <PrimaryButton
+            label="Generate PDF"
+            onPress={handleGeneratePdf}
+            loading={generating}
+            style={styles.actionButton}
+          />
         </View>
-        <Text style={styles.generateHint}>PDF generation and sharing are available starting Stage 6.</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -353,9 +374,9 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
   },
-  generateHint: {
-    ...typography.caption,
-    textAlign: 'center',
+  generateErrorText: {
+    ...typography.body,
+    color: colors.danger,
     marginTop: spacing.sm,
   },
 });

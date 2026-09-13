@@ -58,8 +58,8 @@ implemented._
 | App framework | [Expo](https://expo.dev) (React Native) + TypeScript | No local Android SDK / Java 17 required for development; [EAS Build](https://docs.expo.dev/build/introduction/) builds the production APK/AAB in the cloud; Expo Go gives instant on-device testing |
 | Backend | Firebase (Auth, Firestore, Storage) | Free-tier friendly, no server to run, tight mobile SDK integration |
 | Navigation | React Navigation (native-stack + bottom-tabs) | De facto standard, well supported on Expo |
-| PDF generation | `expo-print` (planned, Stage 6) | On-device generation, no backend needed |
-| Sharing | `expo-sharing` (planned, Stage 6) | Native Android share sheet |
+| PDF generation | `expo-print` | On-device generation, no backend needed |
+| Sharing | `expo-sharing` | Native Android share sheet |
 
 ## Architecture
 
@@ -174,6 +174,9 @@ eas build --platform android --profile production # AAB for Play Store
   is planned — see [Ethical Use](#ethical-use).
 - Report PDFs are regenerated on demand from Firestore data rather than stored in
   Firebase Storage, to stay within free-tier quotas.
+- PDF page headers/footers and running page numbers are not implemented — `expo-print`
+  renders the report HTML to PDF without a page-number injection mechanism. Major
+  sections still start on their own page via CSS page breaks.
 - Single-user accounts only; there is no team/organization collaboration in the MVP.
 
 ## Roadmap
@@ -207,5 +210,6 @@ Being built incrementally. Current stage:
       Finding Library with 10 built-in templates
 - [x] **Stage 5** — Evidence (screenshot + text notes) with Firebase
       Storage, Report Preview
-- [ ] **Stage 6** — PDF generation, Report History, Sharing, Profile, UI polish
+- [x] **Stage 6** — On-device PDF generation and native share sheet,
+      Report History, Profile (report letterhead settings)
 - [ ] **Stage 7** — Security rule hardening, testing, production build prep

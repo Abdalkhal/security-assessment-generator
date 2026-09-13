@@ -39,7 +39,8 @@
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to attach evidence screenshots.",
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to capture evidence photos."
         }
-      ]
+      ],
+      "expo-sharing"
     ]
   }
 }

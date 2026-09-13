@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import React, { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,15 +13,19 @@ import { SEVERITY_LEVELS, SEVERITY_META } from '../../constants/severity';
 import { useAuth } from '../../context/AuthContext';
 import { getAssessments } from '../../services/assessmentService';
 import { getFindings } from '../../services/findingService';
-import { logout } from '../../services/authService';
 import { colors, radius, spacing, typography } from '../../theme';
 import { Assessment, Finding } from '../../types';
 import { countBySeverity, getOverallRisk } from '../../utils/risk';
-import { MainTabParamList } from '../../navigation/types';
 
+// Navigation here spans both this screen's own stack (Dashboard -> Profile)
+// and, for a couple of shortcuts, sibling bottom-tab screens
+// (ClientsTab/AssessmentsTab) - React Navigation resolves route names
+// against parent navigators automatically, but that crosses param-list
+// types, so this is intentionally loosely typed rather than forcing an
+// awkward composite navigation type for a couple of simple navigate() calls.
 export function DashboardScreen() {
   const { user } = useAuth();
-  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const navigation = useNavigation<any>();
 
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [findings, setFindings] = useState<Finding[]>([]);
@@ -101,12 +104,12 @@ export function DashboardScreen() {
             <Text style={styles.name}>{user?.displayName || user?.email}</Text>
           </View>
           <TouchableOpacity
-            onPress={() => logout()}
+            onPress={() => navigation.navigate('Profile')}
             accessibilityRole="button"
-            accessibilityLabel="Log out"
-            style={styles.logoutButton}
+            accessibilityLabel="Profile and settings"
+            style={styles.avatarButton}
           >
-            <Ionicons name="log-out-outline" size={22} color={colors.textSecondary} />
+            <Ionicons name="person-outline" size={22} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -165,6 +168,12 @@ export function DashboardScreen() {
                     assessment={a}
                     findingCount={assessmentFindings.length}
                     overallRisk={getOverallRisk(assessmentFindings)}
+                    onPress={() =>
+                      navigation.navigate('AssessmentsTab', {
+                        screen: 'AssessmentDetail',
+                        params: { assessmentId: a.id },
+                      })
+                    }
                   />
                 );
               })
@@ -176,7 +185,18 @@ export function DashboardScreen() {
             {recentFindings.length === 0 ? (
               <Text style={styles.emptySectionText}>No findings recorded yet.</Text>
             ) : (
-              recentFindings.map((f) => <FindingCard key={f.id} finding={f} />)
+              recentFindings.map((f) => (
+                <FindingCard
+                  key={f.id}
+                  finding={f}
+                  onPress={() =>
+                    navigation.navigate('AssessmentsTab', {
+                      screen: 'FindingDetail',
+                      params: { findingId: f.id },
+                    })
+                  }
+                />
+              ))
             )}
           </>
         )}
@@ -203,7 +223,7 @@ const styles = StyleSheet.create({
   name: {
     ...typography.h2,
   },
-  logoutButton: {
+  avatarButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
