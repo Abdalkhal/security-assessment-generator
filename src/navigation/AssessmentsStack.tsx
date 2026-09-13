@@ -6,6 +6,7 @@ import { AssessmentsListScreen } from '../screens/assessments/AssessmentsListScr
 import { FindingDetailScreen } from '../screens/findings/FindingDetailScreen';
 import { FindingFormScreen } from '../screens/findings/FindingFormScreen';
 import { FindingLibraryScreen } from '../screens/findings/FindingLibraryScreen';
+import { ReportPreviewScreen } from '../screens/reports/ReportPreviewScreen';
 import { colors } from '../theme';
 import { AssessmentsStackParamList } from './types';
 
@@ -22,6 +23,7 @@ export function AssessmentsStackNavigator() {
       <Stack.Screen name="FindingLibrary" component={FindingLibraryScreen} />
       <Stack.Screen name="FindingForm" component={FindingFormScreen} />
       <Stack.Screen name="FindingDetail" component={FindingDetailScreen} />
+      <Stack.Screen name="ReportPreview" component={ReportPreviewScreen} />
     </Stack.Navigator>
   );
 }

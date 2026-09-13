@@ -22,6 +22,7 @@ export type AssessmentsStackParamList = {
   FindingLibrary: { assessmentId: string };
   FindingForm: { assessmentId: string; findingId?: string; templateId?: string };
   FindingDetail: { findingId: string };
+  ReportPreview: { assessmentId: string };
 };
 
 export type ReportsStackParamList = {

@@ -205,6 +205,7 @@ Being built incrementally. Current stage:
       Assessment Details (Overview/Scope/Assets tabs), Scope items, Assets
 - [x] **Stage 4** — Findings (create/edit/delete/view, severity, status),
       Finding Library with 10 built-in templates
-- [ ] **Stage 5** — Evidence, Firebase Storage, Report Preview
+- [x] **Stage 5** — Evidence (screenshot + text notes) with Firebase
+      Storage, Report Preview
 - [ ] **Stage 6** — PDF generation, Report History, Sharing, Profile, UI polish
 - [ ] **Stage 7** — Security rule hardening, testing, production build prep

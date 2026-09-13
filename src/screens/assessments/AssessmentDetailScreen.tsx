@@ -274,11 +274,9 @@ export function AssessmentDetailScreen({ navigation, route }: Props) {
 
           <PrimaryButton
             label="Generate Report"
-            onPress={() => {}}
-            disabled
+            onPress={() => navigation.navigate('ReportPreview', { assessmentId })}
             style={styles.generateButton}
           />
-          <Text style={styles.generateHint}>Report generation is available starting Stage 5.</Text>
         </ScrollView>
       )}
 
@@ -579,11 +577,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   generateButton: {
-    marginTop: spacing.sm,
-  },
-  generateHint: {
-    ...typography.caption,
-    textAlign: 'center',
     marginTop: spacing.sm,
   },
   addSectionButton: {

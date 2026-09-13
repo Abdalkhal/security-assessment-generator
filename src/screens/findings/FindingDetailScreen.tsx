@@ -1,42 +1,65 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { ErrorView } from '../../components/ErrorView';
+import { EvidenceCard } from '../../components/EvidenceCard';
 import { LoadingView } from '../../components/LoadingView';
+import { OptionPickerModal } from '../../components/OptionPickerModal';
 import { SeverityBadge } from '../../components/SeverityBadge';
 import { StatusBadge } from '../../components/StatusBadge';
+import { TextEvidenceFormModal } from '../../components/TextEvidenceFormModal';
 import { FINDING_STATUS_META } from '../../constants/findingStatus';
+import { useAuth } from '../../context/AuthContext';
+import {
+  createScreenshotEvidence,
+  createTextEvidence,
+  deleteEvidence,
+  getEvidenceForFinding,
+} from '../../services/evidenceService';
 import { deleteFinding, getFinding } from '../../services/findingService';
 import { colors, radius, spacing, typography } from '../../theme';
-import { Finding } from '../../types';
+import { Evidence, Finding } from '../../types';
 import { AssessmentsStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AssessmentsStackParamList, 'FindingDetail'>;
 
 export function FindingDetailScreen({ navigation, route }: Props) {
+  const { user } = useAuth();
   const { findingId } = route.params;
   const [finding, setFinding] = useState<Finding | null>(null);
+  const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [addEvidenceChoiceVisible, setAddEvidenceChoiceVisible] = useState(false);
+  const [textEvidenceModalVisible, setTextEvidenceModalVisible] = useState(false);
+  const [evidenceSaving, setEvidenceSaving] = useState(false);
+  const [evidenceUploading, setEvidenceUploading] = useState(false);
+  const [evidenceDeleteTarget, setEvidenceDeleteTarget] = useState<Evidence | null>(null);
+  const [evidenceError, setEvidenceError] = useState('');
+
   const load = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     setError('');
     try {
       const data = await getFinding(findingId);
       setFinding(data);
+      const evidenceData = await getEvidenceForFinding(user.uid, findingId);
+      setEvidence(evidenceData);
     } catch {
       setError('Unable to load finding.');
     } finally {
       setLoading(false);
     }
-  }, [findingId]);
+  }, [findingId, user]);
 
   useFocusEffect(
     useCallback(() => {
@@ -55,6 +78,66 @@ export function FindingDetailScreen({ navigation, route }: Props) {
       setConfirmVisible(false);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const pickImage = async (source: 'camera' | 'library') => {
+    if (!user || !finding) return;
+    setEvidenceError('');
+
+    const permission =
+      source === 'camera'
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setEvidenceError('Permission is required to add a screenshot.');
+      return;
+    }
+
+    const result =
+      source === 'camera'
+        ? await ImagePicker.launchCameraAsync({ quality: 0.8 })
+        : await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    setEvidenceUploading(true);
+    try {
+      await createScreenshotEvidence(user.uid, finding.assessmentId, finding.id, {
+        caption: 'Screenshot',
+        localUri: result.assets[0].uri,
+      });
+      await load();
+    } catch {
+      setEvidenceError('Unable to upload screenshot. Please try again.');
+    } finally {
+      setEvidenceUploading(false);
+    }
+  };
+
+  const handleSaveTextEvidence = async (input: { caption: string; textContent: string }) => {
+    if (!user || !finding) return;
+    setEvidenceSaving(true);
+    try {
+      await createTextEvidence(user.uid, finding.assessmentId, finding.id, input);
+      setTextEvidenceModalVisible(false);
+      await load();
+    } catch {
+      setEvidenceError('Unable to save note. Please try again.');
+    } finally {
+      setEvidenceSaving(false);
+    }
+  };
+
+  const handleDeleteEvidence = async () => {
+    if (!evidenceDeleteTarget) return;
+    try {
+      await deleteEvidence(evidenceDeleteTarget);
+      setEvidenceDeleteTarget(null);
+      await load();
+    } catch {
+      setEvidenceError('Unable to delete evidence.');
+      setEvidenceDeleteTarget(null);
     }
   };
 
@@ -130,8 +213,27 @@ export function FindingDetailScreen({ navigation, route }: Props) {
         <View style={styles.card}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Evidence</Text>
+            <TouchableOpacity
+              onPress={() => setAddEvidenceChoiceVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Add evidence"
+              disabled={evidenceUploading}
+            >
+              {evidenceUploading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+              )}
+            </TouchableOpacity>
           </View>
-          <Text style={styles.bodyTextMuted}>Evidence attachments are available starting Stage 5.</Text>
+          {!!evidenceError && <Text style={styles.evidenceErrorText}>{evidenceError}</Text>}
+          {evidence.length === 0 ? (
+            <Text style={styles.bodyTextMuted}>No evidence added yet.</Text>
+          ) : (
+            evidence.map((item) => (
+              <EvidenceCard key={item.id} evidence={item} onDelete={() => setEvidenceDeleteTarget(item)} />
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -144,6 +246,42 @@ export function FindingDetailScreen({ navigation, route }: Props) {
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setConfirmVisible(false)}
+      />
+
+      <OptionPickerModal
+        visible={addEvidenceChoiceVisible}
+        title="Add Evidence"
+        options={[
+          { label: 'Take Photo', value: 'camera', description: 'Capture a new screenshot with the camera' },
+          { label: 'Choose from Library', value: 'library', description: 'Pick an existing screenshot' },
+          { label: 'Add Text Note', value: 'text', description: 'Record a command output or observation' },
+        ]}
+        onSelect={(value) => {
+          setAddEvidenceChoiceVisible(false);
+          if (value === 'text') {
+            setTextEvidenceModalVisible(true);
+          } else {
+            pickImage(value as 'camera' | 'library');
+          }
+        }}
+        onClose={() => setAddEvidenceChoiceVisible(false)}
+      />
+
+      <TextEvidenceFormModal
+        visible={textEvidenceModalVisible}
+        saving={evidenceSaving}
+        onSave={handleSaveTextEvidence}
+        onClose={() => setTextEvidenceModalVisible(false)}
+      />
+
+      <ConfirmDialog
+        visible={!!evidenceDeleteTarget}
+        title="Delete evidence?"
+        message="This will permanently remove this evidence item. This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleDeleteEvidence}
+        onCancel={() => setEvidenceDeleteTarget(null)}
       />
     </SafeAreaView>
   );
@@ -230,6 +368,11 @@ const styles = StyleSheet.create({
   },
   bodyTextMuted: {
     ...typography.caption,
+  },
+  evidenceErrorText: {
+    ...typography.caption,
+    color: colors.danger,
+    marginBottom: spacing.sm,
   },
   monoText: {
     ...typography.mono,
