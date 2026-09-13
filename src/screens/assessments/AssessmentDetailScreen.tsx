@@ -8,7 +8,9 @@ import { AssetCard } from '../../components/AssetCard';
 import { AssetFormModal } from '../../components/AssetFormModal';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { ErrorView } from '../../components/ErrorView';
+import { FindingCard } from '../../components/FindingCard';
 import { LoadingView } from '../../components/LoadingView';
+import { OptionPickerModal } from '../../components/OptionPickerModal';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScopeFormModal } from '../../components/ScopeFormModal';
 import { ScopeItemRow } from '../../components/ScopeItemRow';
@@ -27,7 +29,7 @@ import { AssessmentsStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AssessmentsStackParamList, 'AssessmentDetail'>;
 
-type Tab = 'overview' | 'scope' | 'assets';
+type Tab = 'overview' | 'scope' | 'assets' | 'findings';
 
 export function AssessmentDetailScreen({ navigation, route }: Props) {
   const { user } = useAuth();
@@ -53,6 +55,8 @@ export function AssessmentDetailScreen({ navigation, route }: Props) {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [assetSaving, setAssetSaving] = useState(false);
   const [assetDeleteTarget, setAssetDeleteTarget] = useState<Asset | null>(null);
+
+  const [createFindingChoiceVisible, setCreateFindingChoiceVisible] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -204,15 +208,21 @@ export function AssessmentDetailScreen({ navigation, route }: Props) {
         </Text>
       </View>
 
-      <View style={styles.tabBar}>
-        {(['overview', 'scope', 'assets'] as Tab[]).map((t) => (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
+        {(['overview', 'scope', 'assets', 'findings'] as Tab[]).map((t) => (
           <TouchableOpacity key={t} style={[styles.tabButton, tab === t && styles.tabButtonActive]} onPress={() => setTab(t)}>
             <Text style={[styles.tabLabel, tab === t && styles.tabLabelActive]}>
-              {t === 'overview' ? 'Overview' : t === 'scope' ? 'Scope' : 'Assets'}
+              {t === 'overview'
+                ? 'Overview'
+                : t === 'scope'
+                ? 'Scope'
+                : t === 'assets'
+                ? 'Assets'
+                : `Findings (${findings.length})`}
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {tab === 'overview' && (
         <ScrollView contentContainerStyle={styles.content}>
@@ -351,6 +361,27 @@ export function AssessmentDetailScreen({ navigation, route }: Props) {
         </ScrollView>
       )}
 
+      {tab === 'findings' && (
+        <ScrollView contentContainerStyle={styles.content}>
+          {findings.length === 0 ? (
+            <Text style={styles.bodyText}>No findings recorded yet.</Text>
+          ) : (
+            findings.map((f) => (
+              <FindingCard
+                key={f.id}
+                finding={f}
+                onPress={() => navigation.navigate('FindingDetail', { findingId: f.id })}
+              />
+            ))
+          )}
+          <PrimaryButton
+            label="Add Finding"
+            onPress={() => setCreateFindingChoiceVisible(true)}
+            style={styles.addSectionButton}
+          />
+        </ScrollView>
+      )}
+
       <ConfirmDialog
         visible={deleteConfirmVisible}
         title="Delete assessment?"
@@ -400,6 +431,24 @@ export function AssessmentDetailScreen({ navigation, route }: Props) {
         destructive
         onConfirm={handleDeleteAsset}
         onCancel={() => setAssetDeleteTarget(null)}
+      />
+
+      <OptionPickerModal
+        visible={createFindingChoiceVisible}
+        title="Add Finding"
+        options={[
+          { label: 'Create Manually', value: 'manual', description: 'Start from a blank finding' },
+          { label: 'Use Finding Template', value: 'template', description: 'Start from the built-in library' },
+        ]}
+        onSelect={(value) => {
+          setCreateFindingChoiceVisible(false);
+          if (value === 'template') {
+            navigation.navigate('FindingLibrary', { assessmentId });
+          } else {
+            navigation.navigate('FindingForm', { assessmentId });
+          }
+        }}
+        onClose={() => setCreateFindingChoiceVisible(false)}
       />
     </SafeAreaView>
   );

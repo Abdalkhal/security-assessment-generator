@@ -19,6 +19,9 @@ export type AssessmentsStackParamList = {
   AssessmentsList: undefined;
   AssessmentDetail: { assessmentId: string };
   AssessmentForm: { assessmentId?: string; clientId?: string } | undefined;
+  FindingLibrary: { assessmentId: string };
+  FindingForm: { assessmentId: string; findingId?: string; templateId?: string };
+  FindingDetail: { findingId: string };
 };
 
 export type ReportsStackParamList = {
