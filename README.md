@@ -199,7 +199,8 @@ Being built incrementally. Current stage:
 
 - [x] **Stage 1** — Project setup, theme, navigation foundation, Firebase integration,
       email/password authentication (Splash, Login, Register, Forgot Password)
-- [ ] **Stage 2** — Dashboard, Clients
+- [x] **Stage 2** — Dashboard (stats, risk overview, recent activity), Clients
+      (create/edit/delete/view, search, assessment count)
 - [ ] **Stage 3** — Assessments, Assessment Details, Scope, Assets
 - [ ] **Stage 4** — Findings, Finding Details, Finding Library
 - [ ] **Stage 5** — Evidence, Firebase Storage, Report Preview

@@ -18,10 +18,48 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // For top-level owned collections (clients, assessments, assets,
+    // findings, reports): the document must carry ownerId == caller's uid,
+    // both on the existing document (for read/update/delete) and on the
+    // incoming data (for create), so a user can never read someone else's
+    // document or create one on another user's behalf.
+    function isOwnedDoc() {
+      return isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    function isOwnedCreate() {
+      return isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+    }
+
     match /users/{userId} {
       allow read, update: if isOwner(userId);
       allow create: if isOwner(userId);
       allow delete: if false;
+    }
+
+    match /clients/{clientId} {
+      allow read, update, delete: if isOwnedDoc();
+      allow create: if isOwnedCreate();
+    }
+
+    match /assessments/{assessmentId} {
+      allow read, update, delete: if isOwnedDoc();
+      allow create: if isOwnedCreate();
+    }
+
+    match /assets/{assetId} {
+      allow read, update, delete: if isOwnedDoc();
+      allow create: if isOwnedCreate();
+    }
+
+    match /findings/{findingId} {
+      allow read, update, delete: if isOwnedDoc();
+      allow create: if isOwnedCreate();
+    }
+
+    match /reports/{reportId} {
+      allow read, update, delete: if isOwnedDoc();
+      allow create: if isOwnedCreate();
     }
 
     // Built-in finding templates are readable by any signed-in user and

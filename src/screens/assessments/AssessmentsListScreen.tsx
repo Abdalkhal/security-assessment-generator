@@ -1,11 +1,12 @@
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/EmptyState';
 import { colors, spacing, typography } from '../../theme';
 
 export function AssessmentsListScreen() {
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Assessments</Text>
       </View>
