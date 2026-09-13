@@ -1,17 +1,19 @@
 {
   "expo": {
-    "name": "sag",
+    "name": "Security Assessment Generator",
     "slug": "sag",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0F14",
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.sag.securityassessmentgenerator",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B0F14",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -20,6 +22,16 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B0F14",
+          "image": "./assets/icon.png",
+          "imageWidth": 120
+        }
+      ]
+    ]
   }
 }

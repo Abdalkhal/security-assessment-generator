@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Security model: every document in a user-owned collection carries an
+// `ownerId` field (or, for `users/{userId}`, the uid is the document id
+// itself) that must match the authenticated caller's uid. Nothing here
+// trusts a userId supplied by the client for authorization decisions -
+// only request.auth.uid, which Firebase Auth verifies server-side.
+//
+// This file is extended stage by stage as new collections
+// (clients, assessments, assets, findings, evidence, reports) are added.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read, update: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // Built-in finding templates are readable by any signed-in user and
+    // are only ever written by administrators via the Firebase console
+    // or a trusted backend - never directly by the app.
+    match /findingTemplates/{templateId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Default deny: any collection not explicitly opened above is
+    // inaccessible until a rule for it is added.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
