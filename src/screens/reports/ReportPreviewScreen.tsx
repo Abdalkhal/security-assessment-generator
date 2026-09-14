@@ -249,7 +249,9 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
+      <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">
+        {value}
+      </Text>
     </View>
   );
 }
@@ -297,13 +299,18 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: spacing.sm,
+    gap: spacing.md,
   },
   infoLabel: {
     ...typography.caption,
+    flexShrink: 0,
   },
   infoValue: {
     ...typography.body,
+    flex: 1,
+    textAlign: 'right',
   },
   fieldLabel: {
     ...typography.label,
