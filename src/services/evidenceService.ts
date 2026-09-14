@@ -1,3 +1,5 @@
+import { Blob as ExpoBlob } from 'expo-blob';
+import { File } from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import {
   collection,
@@ -65,23 +67,28 @@ export async function createScreenshotEvidence(
     { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
   );
 
-  // Firebase Storage's upload machinery internally constructs
-  // `new Blob([bytes])` to build the request body, which React Native's
-  // Blob implementation does not support for raw ArrayBuffer/typed-array
-  // input ("Creating blobs from 'ArrayBuffer' and 'ArrayBufferView' are
-  // not supported") - confirmed on-device with both the new
-  // expo-file-system File API and uploadString(). The one input Firebase
-  // will NOT try to re-wrap is an already-genuine Blob, which is exactly
-  // what fetch(uri).blob() returns in React Native (a native-backed Blob,
-  // not a manually constructed one) - this is also Firebase's own
-  // documented pattern for RN uploads.
-  const response = await fetch(manipulated.uri);
-  const blob = await response.blob();
+  // Two things had to both be right here, found by testing on-device:
+  // 1. Reading the local file: fetch(uri).blob() is unreliable for local
+  //    file:// URIs on React Native (silently producible empty/corrupt
+  //    blobs) - expo-file-system's File.arrayBuffer() reads real bytes
+  //    natively instead.
+  // 2. Wrapping those bytes for Firebase: React Native's built-in global
+  //    Blob cannot be constructed from raw ArrayBuffer/typed-array data
+  //    ("Creating blobs from 'ArrayBuffer' and 'ArrayBufferView' are not
+  //    supported") - and Firebase Storage's uploadBytes/uploadString both
+  //    hit that internally when given raw bytes. expo-blob's Blob is a
+  //    real native-backed Blob that explicitly accepts ArrayBuffer parts.
+  const bytes = await new File(manipulated.uri).arrayBuffer();
+  const blob = new ExpoBlob([bytes], { type: 'image/jpeg' });
 
   const evidenceRef = doc(collection(db, EVIDENCE_COLLECTION));
   const storagePath = `users/${ownerId}/assessments/${assessmentId}/findings/${findingId}/evidence/${evidenceRef.id}.jpg`;
   const storageRef = ref(storage, storagePath);
-  await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
+  // expo-blob's Blob is functionally a real Blob at runtime (that's the
+  // whole point of using it here) but its generic typing differs slightly
+  // from the DOM Blob type Firebase's SDK expects (ArrayBufferLike vs
+  // ArrayBuffer) - safe to assert past that mismatch.
+  await uploadBytes(storageRef, blob as unknown as Blob, { contentType: 'image/jpeg' });
 
   await setDoc(evidenceRef, {
     type: 'SCREENSHOT',
