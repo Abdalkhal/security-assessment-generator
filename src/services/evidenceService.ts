@@ -1,5 +1,5 @@
 import { Blob as ExpoBlob } from 'expo-blob';
-import { File } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import {
   collection,
@@ -15,6 +15,7 @@ import {
 import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
 import { Evidence } from '../types';
+import { base64ToBytes, bytesToBase64 } from '../utils/base64';
 
 const EVIDENCE_COLLECTION = 'evidence';
 const MAX_IMAGE_DIMENSION = 1600;
@@ -67,18 +68,26 @@ export async function createScreenshotEvidence(
     { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
   );
 
-  // Two things had to both be right here, found by testing on-device:
-  // 1. Reading the local file: fetch(uri).blob() is unreliable for local
-  //    file:// URIs on React Native (silently producible empty/corrupt
-  //    blobs) - expo-file-system's File.arrayBuffer() reads real bytes
-  //    natively instead.
-  // 2. Wrapping those bytes for Firebase: React Native's built-in global
-  //    Blob cannot be constructed from raw ArrayBuffer/typed-array data
-  //    ("Creating blobs from 'ArrayBuffer' and 'ArrayBufferView' are not
-  //    supported") - and Firebase Storage's uploadBytes/uploadString both
-  //    hit that internally when given raw bytes. expo-blob's Blob is a
-  //    real native-backed Blob that explicitly accepts ArrayBuffer parts.
-  const bytes = await new File(manipulated.uri).arrayBuffer();
+  // Three approaches were tried and ruled out on-device before this one:
+  // - fetch(uri).blob(): unreliable for local file:// URIs on RN.
+  // - Firebase's uploadBytes/uploadString given a raw ArrayBuffer:
+  //   Firebase internally does `new Blob([bytes])`, which React Native's
+  //   built-in Blob does not support for ArrayBuffer/typed-array input.
+  // - expo-file-system's new `File(uri).arrayBuffer()`: silently resolved
+  //   to `undefined` in Expo Go on this device (no error thrown - the
+  //   resulting Blob part got stringified to the literal text "undefined",
+  //   which is what actually got uploaded and is why the image never
+  //   rendered despite every step reporting success).
+  // This combination is what actually works: expo-file-system's long
+  // established *legacy* readAsStringAsync (proven reliable throughout
+  // this debugging) to get base64 text, decoded to real bytes ourselves
+  // (base64ToBytes, unit-tested for round-trip correctness), wrapped in
+  // expo-blob's Blob (a real native-backed Blob that Firebase's SDK won't
+  // try to re-wrap, unlike RN's built-in one).
+  const base64 = await FileSystem.readAsStringAsync(manipulated.uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const bytes = base64ToBytes(base64);
   console.log('[evidence] local file read', { byteLength: bytes.byteLength });
   const blob = new ExpoBlob([bytes], { type: 'image/jpeg' });
   console.log('[evidence] blob constructed', { size: blob.size, type: blob.type });
@@ -109,24 +118,6 @@ export async function createScreenshotEvidence(
     updatedAt: serverTimestamp(),
   });
   return evidenceRef.id;
-}
-
-const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-
-// Pure-JS base64 encoder so this works the same on Android (Hermes has no
-// global btoa) and web, without adding a polyfill dependency.
-function bytesToBase64(bytes: Uint8Array): string {
-  let result = '';
-  for (let i = 0; i < bytes.length; i += 3) {
-    const b1 = bytes[i];
-    const b2 = bytes[i + 1];
-    const b3 = bytes[i + 2];
-    result += BASE64_CHARS[b1 >> 2];
-    result += BASE64_CHARS[((b1 & 3) << 4) | (b2 >> 4)];
-    result += b2 !== undefined ? BASE64_CHARS[((b2 & 15) << 2) | (b3 >> 6)] : '=';
-    result += b3 !== undefined ? BASE64_CHARS[b3 & 63] : '=';
-  }
-  return result;
 }
 
 // Reads the image via the Storage SDK (which enforces storage.rules and
