@@ -1,4 +1,4 @@
-import { File } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import {
   collection,
@@ -11,7 +11,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, getBytes, ref, uploadString, StringFormat } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
 import { Evidence } from '../types';
 
@@ -66,25 +66,31 @@ export async function createScreenshotEvidence(
     { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
   );
 
-  // Read the manipulated file's bytes via expo-file-system's File API
-  // rather than fetch(uri).blob() - React Native's fetch/Blob
-  // implementation is not spec-compliant and unreliably produces
-  // empty/corrupt blobs for local file:// URIs, which silently uploads
-  // a broken (0-byte) image with no error.
-  const localFile = new File(manipulated.uri);
-  const bytes = await localFile.arrayBuffer();
+  // Read the manipulated file as base64 via expo-file-system's stable
+  // legacy API and upload that string directly - fetch(uri).blob() is
+  // not spec-compliant in React Native and unreliably produces
+  // empty/corrupt blobs for local file:// URIs (silently uploads a
+  // broken 0-byte image with no error). The newer expo-file-system
+  // `File` class was tried too but errored in Expo Go on-device; this
+  // legacy readAsStringAsync + uploadString path is the long-established,
+  // Expo-Go-compatible way to do this.
+  const base64 = await FileSystem.readAsStringAsync(manipulated.uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const fileInfo = await FileSystem.getInfoAsync(manipulated.uri);
+  const fileSize = fileInfo.exists ? fileInfo.size : 0;
 
   const evidenceRef = doc(collection(db, EVIDENCE_COLLECTION));
   const storagePath = `users/${ownerId}/assessments/${assessmentId}/findings/${findingId}/evidence/${evidenceRef.id}.jpg`;
   const storageRef = ref(storage, storagePath);
-  await uploadBytes(storageRef, bytes, { contentType: 'image/jpeg' });
+  await uploadString(storageRef, base64, StringFormat.BASE64, { contentType: 'image/jpeg' });
 
   await setDoc(evidenceRef, {
     type: 'SCREENSHOT',
     caption: input.caption,
     storagePath,
     fileName: `${evidenceRef.id}.jpg`,
-    fileSize: bytes.byteLength,
+    fileSize,
     ownerId,
     assessmentId,
     findingId,
