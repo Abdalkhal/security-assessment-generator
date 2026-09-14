@@ -108,8 +108,10 @@ export function FindingDetailScreen({ navigation, route }: Props) {
         localUri: result.assets[0].uri,
       });
       await load();
-    } catch {
-      setEvidenceError('Unable to upload screenshot. Please try again.');
+    } catch (err) {
+      console.error('[evidence] screenshot upload failed', err);
+      const message = err instanceof Error ? err.message : String(err);
+      setEvidenceError(`Unable to upload screenshot: ${message}`);
     } finally {
       setEvidenceUploading(false);
     }
