@@ -1,6 +1,6 @@
 import { getApps, initializeApp } from 'firebase/app';
 import { getReactNativePersistence, initializeAuth, getAuth, type Auth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -38,7 +38,18 @@ try {
   auth = getAuth(app);
 }
 
-const db = getFirestore(app);
+// ignoreUndefinedProperties: our forms use `undefined` to mean "this
+// optional field wasn't set" (e.g. Finding.affectedAssetId, cvssScore).
+// Without this, the Firestore SDK throws on any undefined field instead
+// of just omitting it, which fails every write that leaves an optional
+// field blank.
+let db: Firestore;
+try {
+  db = initializeFirestore(app, { ignoreUndefinedProperties: true });
+} catch {
+  db = getFirestore(app);
+}
+
 const storage = getStorage(app);
 
 export { app, auth, db, storage };

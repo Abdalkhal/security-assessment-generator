@@ -8,7 +8,7 @@ export function SeverityBadge({ severity }: { severity: Severity }) {
   const meta = SEVERITY_META[severity];
   return (
     <View style={[styles.badge, { backgroundColor: `${meta.color}22`, borderColor: `${meta.color}55` }]}>
-      <Ionicons name={meta.icon as any} size={12} color={meta.color} />
+      <Ionicons name={meta.icon} size={12} color={meta.color} />
       <Text style={[styles.label, { color: meta.color }]}>{meta.label}</Text>
     </View>
   );

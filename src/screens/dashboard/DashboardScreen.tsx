@@ -142,7 +142,7 @@ export function DashboardScreen() {
                 return (
                   <View key={level} style={styles.riskRow}>
                     <View style={styles.riskLabelRow}>
-                      <Ionicons name={meta.icon as any} size={16} color={meta.color} />
+                      <Ionicons name={meta.icon} size={16} color={meta.color} />
                       <Text style={styles.riskLabel}>{meta.label}</Text>
                     </View>
                     <Text style={[styles.riskValue, { color: meta.color }]}>{severityCounts[level]}</Text>
