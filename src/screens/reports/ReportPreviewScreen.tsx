@@ -69,8 +69,10 @@ export function ReportPreviewScreen({ navigation, route }: Props) {
     setGenerating(true);
     try {
       await generateAssessmentReportPdf(user.uid, assessmentId);
-    } catch {
-      setGenerateError('Unable to generate PDF. Please try again.');
+    } catch (err) {
+      console.error('[report] PDF generation failed', err);
+      const message = err instanceof Error ? err.message : String(err);
+      setGenerateError(`Unable to generate PDF: ${message}`);
     } finally {
       setGenerating(false);
     }
