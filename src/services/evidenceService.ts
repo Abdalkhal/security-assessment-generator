@@ -79,7 +79,9 @@ export async function createScreenshotEvidence(
   //    hit that internally when given raw bytes. expo-blob's Blob is a
   //    real native-backed Blob that explicitly accepts ArrayBuffer parts.
   const bytes = await new File(manipulated.uri).arrayBuffer();
+  console.log('[evidence] local file read', { byteLength: bytes.byteLength });
   const blob = new ExpoBlob([bytes], { type: 'image/jpeg' });
+  console.log('[evidence] blob constructed', { size: blob.size, type: blob.type });
 
   const evidenceRef = doc(collection(db, EVIDENCE_COLLECTION));
   const storagePath = `users/${ownerId}/assessments/${assessmentId}/findings/${findingId}/evidence/${evidenceRef.id}.jpg`;
@@ -88,7 +90,11 @@ export async function createScreenshotEvidence(
   // whole point of using it here) but its generic typing differs slightly
   // from the DOM Blob type Firebase's SDK expects (ArrayBufferLike vs
   // ArrayBuffer) - safe to assert past that mismatch.
-  await uploadBytes(storageRef, blob as unknown as Blob, { contentType: 'image/jpeg' });
+  const uploadResult = await uploadBytes(storageRef, blob as unknown as Blob, { contentType: 'image/jpeg' });
+  console.log('[evidence] upload result', {
+    serverSize: uploadResult.metadata.size,
+    contentType: uploadResult.metadata.contentType,
+  });
 
   await setDoc(evidenceRef, {
     type: 'SCREENSHOT',
@@ -131,7 +137,10 @@ function bytesToBase64(bytes: Uint8Array): string {
 export async function getEvidenceImageDataUri(storagePath: string): Promise<string> {
   const storageRef = ref(storage, storagePath);
   const bytes = new Uint8Array(await getBytes(storageRef));
-  return `data:image/jpeg;base64,${bytesToBase64(bytes)}`;
+  console.log('[evidence] downloaded bytes for display', { byteLength: bytes.byteLength, first8: Array.from(bytes.slice(0, 8)) });
+  const base64 = bytesToBase64(bytes);
+  console.log('[evidence] base64 encoded', { length: base64.length, prefix: base64.slice(0, 20) });
+  return `data:image/jpeg;base64,${base64}`;
 }
 
 export async function updateEvidenceCaption(evidenceId: string, caption: string): Promise<void> {
