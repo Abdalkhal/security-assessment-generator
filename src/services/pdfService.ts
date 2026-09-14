@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { SEVERITY_META, SEVERITY_LEVELS } from '../constants/severity';
@@ -265,6 +266,14 @@ export async function generateAssessmentReportPdf(ownerId: string, assessmentId:
 
   const { uri } = await Print.printToFileAsync({ html, base64: false });
 
+  // expo-sharing can reject the raw path printToFileAsync returns with
+  // "Not allowed to read file under given URL" (confirmed on-device, an
+  // Expo Go FileProvider quirk) - copying to a filename we control in the
+  // cache directory first reliably works around it.
+  const safeName = assessment.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 60) || 'report';
+  const destination = `${FileSystem.cacheDirectory}${safeName}-${Date.now()}.pdf`;
+  await FileSystem.copyAsync({ from: uri, to: destination });
+
   await createReportRecord(ownerId, {
     assessmentId,
     assessmentTitle: assessment.title,
@@ -275,7 +284,7 @@ export async function generateAssessmentReportPdf(ownerId: string, assessmentId:
 
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
-    await Sharing.shareAsync(uri, {
+    await Sharing.shareAsync(destination, {
       mimeType: 'application/pdf',
       dialogTitle: `${assessment.title} - Security Assessment Report`,
     });
