@@ -264,15 +264,24 @@ export async function generateAssessmentReportPdf(ownerId: string, assessmentId:
   </body>
   </html>`;
 
-  const { uri } = await Print.printToFileAsync({ html, base64: false });
-
-  // expo-sharing can reject the raw path printToFileAsync returns with
-  // "Not allowed to read file under given URL" (confirmed on-device, an
-  // Expo Go FileProvider quirk) - copying to a filename we control in the
-  // cache directory first reliably works around it.
+  // Confirmed on-device in Expo Go: both sharing the raw path
+  // printToFileAsync() returns ("Not allowed to read file under given
+  // URL") and copyAsync()-ing it first ("isn't readable") fail - the file
+  // lives in Expo Go's own package cache, which this app's file-system
+  // access apparently can't reliably read back from that specific path.
+  // Requesting base64 directly sidesteps that entirely: the PDF bytes
+  // come back in-memory from printToFileAsync's own result rather than
+  // needing a follow-up read of a path outside our control, and we write
+  // them ourselves to a location we know is accessible.
+  const { base64 } = await Print.printToFileAsync({ html, base64: true });
+  if (!base64) {
+    throw new Error('PDF generation did not return file data.');
+  }
   const safeName = assessment.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 60) || 'report';
   const destination = `${FileSystem.cacheDirectory}${safeName}-${Date.now()}.pdf`;
-  await FileSystem.copyAsync({ from: uri, to: destination });
+  await FileSystem.writeAsStringAsync(destination, base64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
 
   await createReportRecord(ownerId, {
     assessmentId,
