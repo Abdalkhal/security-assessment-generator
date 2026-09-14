@@ -167,9 +167,24 @@ export async function generateAssessmentReportPdf(ownerId: string, assessmentId:
       .stat-label { font-size: 10px; color: #667; }
       ul { margin: 4px 0; padding-left: 20px; }
       pre { background: #f5f5f5; padding: 8px; border-radius: 4px; font-size: 11px; white-space: pre-wrap; }
-      .evidence-item { margin-top: 8px; padding: 8px; background: #fafafa; border-radius: 4px; }
+      .evidence-item {
+        margin-top: 8px;
+        padding: 8px;
+        background: #fafafa;
+        border-radius: 4px;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
       .evidence-caption { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
-      .evidence-image { max-width: 100%; border-radius: 4px; }
+      .evidence-image {
+        display: block;
+        max-width: 100%;
+        max-height: 320px;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        border-radius: 4px;
+      }
       .evidence-text { font-size: 12px; color: #444; white-space: pre-wrap; }
       .disclaimer { font-size: 11px; color: #667; font-style: italic; margin-top: 16px; }
       .footer-note { font-size: 10px; color: #999; text-align: center; margin-top: 48px; }
