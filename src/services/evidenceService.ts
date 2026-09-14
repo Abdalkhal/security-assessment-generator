@@ -1,4 +1,3 @@
-import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import {
   collection,
@@ -11,7 +10,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { deleteObject, getBytes, ref, uploadString, StringFormat } from 'firebase/storage';
+import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
 import { Evidence } from '../types';
 
@@ -66,31 +65,30 @@ export async function createScreenshotEvidence(
     { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
   );
 
-  // Read the manipulated file as base64 via expo-file-system's stable
-  // legacy API and upload that string directly - fetch(uri).blob() is
-  // not spec-compliant in React Native and unreliably produces
-  // empty/corrupt blobs for local file:// URIs (silently uploads a
-  // broken 0-byte image with no error). The newer expo-file-system
-  // `File` class was tried too but errored in Expo Go on-device; this
-  // legacy readAsStringAsync + uploadString path is the long-established,
-  // Expo-Go-compatible way to do this.
-  const base64 = await FileSystem.readAsStringAsync(manipulated.uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  const fileInfo = await FileSystem.getInfoAsync(manipulated.uri);
-  const fileSize = fileInfo.exists ? fileInfo.size : 0;
+  // Firebase Storage's upload machinery internally constructs
+  // `new Blob([bytes])` to build the request body, which React Native's
+  // Blob implementation does not support for raw ArrayBuffer/typed-array
+  // input ("Creating blobs from 'ArrayBuffer' and 'ArrayBufferView' are
+  // not supported") - confirmed on-device with both the new
+  // expo-file-system File API and uploadString(). The one input Firebase
+  // will NOT try to re-wrap is an already-genuine Blob, which is exactly
+  // what fetch(uri).blob() returns in React Native (a native-backed Blob,
+  // not a manually constructed one) - this is also Firebase's own
+  // documented pattern for RN uploads.
+  const response = await fetch(manipulated.uri);
+  const blob = await response.blob();
 
   const evidenceRef = doc(collection(db, EVIDENCE_COLLECTION));
   const storagePath = `users/${ownerId}/assessments/${assessmentId}/findings/${findingId}/evidence/${evidenceRef.id}.jpg`;
   const storageRef = ref(storage, storagePath);
-  await uploadString(storageRef, base64, StringFormat.BASE64, { contentType: 'image/jpeg' });
+  await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
 
   await setDoc(evidenceRef, {
     type: 'SCREENSHOT',
     caption: input.caption,
     storagePath,
     fileName: `${evidenceRef.id}.jpg`,
-    fileSize,
+    fileSize: blob.size,
     ownerId,
     assessmentId,
     findingId,

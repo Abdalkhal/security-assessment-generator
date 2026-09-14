@@ -24,7 +24,8 @@ export function EvidenceCard({ evidence, onDelete }: EvidenceCardProps) {
       .then((uri) => {
         if (!cancelled) setImageUri(uri);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('[evidence] failed to load image', err);
         if (!cancelled) setImageError(true);
       })
       .finally(() => {
@@ -63,7 +64,15 @@ export function EvidenceCard({ evidence, onDelete }: EvidenceCardProps) {
               <Text style={styles.imageErrorText}>Unable to load image</Text>
             </View>
           ) : (
-            <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.image}
+              resizeMode="cover"
+              onError={(e) => {
+                console.error('[evidence] Image failed to render', e.nativeEvent.error);
+                setImageError(true);
+              }}
+            />
           )}
         </View>
       ) : (
