@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import {
   collection,
@@ -65,20 +66,25 @@ export async function createScreenshotEvidence(
     { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
   );
 
-  const response = await fetch(manipulated.uri);
-  const blob = await response.blob();
+  // Read the manipulated file's bytes via expo-file-system's File API
+  // rather than fetch(uri).blob() - React Native's fetch/Blob
+  // implementation is not spec-compliant and unreliably produces
+  // empty/corrupt blobs for local file:// URIs, which silently uploads
+  // a broken (0-byte) image with no error.
+  const localFile = new File(manipulated.uri);
+  const bytes = await localFile.arrayBuffer();
 
   const evidenceRef = doc(collection(db, EVIDENCE_COLLECTION));
   const storagePath = `users/${ownerId}/assessments/${assessmentId}/findings/${findingId}/evidence/${evidenceRef.id}.jpg`;
   const storageRef = ref(storage, storagePath);
-  await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
+  await uploadBytes(storageRef, bytes, { contentType: 'image/jpeg' });
 
   await setDoc(evidenceRef, {
     type: 'SCREENSHOT',
     caption: input.caption,
     storagePath,
     fileName: `${evidenceRef.id}.jpg`,
-    fileSize: blob.size,
+    fileSize: bytes.byteLength,
     ownerId,
     assessmentId,
     findingId,
