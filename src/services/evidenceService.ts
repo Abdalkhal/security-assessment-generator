@@ -1,5 +1,3 @@
-import { Blob as ExpoBlob } from 'expo-blob';
-import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import {
   collection,
@@ -15,7 +13,7 @@ import {
 import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
 import { Evidence } from '../types';
-import { base64ToBytes, bytesToBase64 } from '../utils/base64';
+import { bytesToBase64 } from '../utils/base64';
 
 const EVIDENCE_COLLECTION = 'evidence';
 const MAX_IMAGE_DIMENSION = 1600;
@@ -68,38 +66,30 @@ export async function createScreenshotEvidence(
     { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
   );
 
-  // Three approaches were tried and ruled out on-device before this one:
-  // - fetch(uri).blob(): unreliable for local file:// URIs on RN.
-  // - Firebase's uploadBytes/uploadString given a raw ArrayBuffer:
+  // Diagnostic logging (see [evidence] console lines) proved, in order:
+  // - fetch(uri).blob(): no error, but never confirmed byte-accurate.
+  // - Raw ArrayBuffer/typed-array passed to uploadBytes/uploadString:
   //   Firebase internally does `new Blob([bytes])`, which React Native's
-  //   built-in Blob does not support for ArrayBuffer/typed-array input.
+  //   built-in Blob rejects for ArrayBuffer/typed-array input.
   // - expo-file-system's new `File(uri).arrayBuffer()`: silently resolved
-  //   to `undefined` in Expo Go on this device (no error thrown - the
-  //   resulting Blob part got stringified to the literal text "undefined",
-  //   which is what actually got uploaded and is why the image never
-  //   rendered despite every step reporting success).
-  // This combination is what actually works: expo-file-system's long
-  // established *legacy* readAsStringAsync (proven reliable throughout
-  // this debugging) to get base64 text, decoded to real bytes ourselves
-  // (base64ToBytes, unit-tested for round-trip correctness), wrapped in
-  // expo-blob's Blob (a real native-backed Blob that Firebase's SDK won't
-  // try to re-wrap, unlike RN's built-in one).
-  const base64 = await FileSystem.readAsStringAsync(manipulated.uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  const bytes = base64ToBytes(base64);
-  console.log('[evidence] local file read', { byteLength: bytes.byteLength });
-  const blob = new ExpoBlob([bytes], { type: 'image/jpeg' });
-  console.log('[evidence] blob constructed', { size: blob.size, type: blob.type });
+  //   to `undefined` on this device - no error, but uploaded garbage.
+  // - expo-file-system legacy base64 read + expo-blob's Blob: read and
+  //   wrapped the bytes correctly (confirmed via logging: local size and
+  //   blob.size both matched the real ~229KB file) but Firebase's
+  //   uploadBytes still only transmitted 9 bytes server-side - so
+  //   Firebase's SDK does not correctly read data out of an expo-blob
+  //   Blob, despite it looking like a valid Blob.
+  // Back to fetch(uri).blob() - the one combination that has never thrown
+  // an error at any stage - now with the same size logging at every step
+  // to confirm byte-accuracy instead of assuming it.
+  const response = await fetch(manipulated.uri);
+  const blob = await response.blob();
+  console.log('[evidence] blob from fetch', { size: blob.size, type: blob.type });
 
   const evidenceRef = doc(collection(db, EVIDENCE_COLLECTION));
   const storagePath = `users/${ownerId}/assessments/${assessmentId}/findings/${findingId}/evidence/${evidenceRef.id}.jpg`;
   const storageRef = ref(storage, storagePath);
-  // expo-blob's Blob is functionally a real Blob at runtime (that's the
-  // whole point of using it here) but its generic typing differs slightly
-  // from the DOM Blob type Firebase's SDK expects (ArrayBufferLike vs
-  // ArrayBuffer) - safe to assert past that mismatch.
-  const uploadResult = await uploadBytes(storageRef, blob as unknown as Blob, { contentType: 'image/jpeg' });
+  const uploadResult = await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
   console.log('[evidence] upload result', {
     serverSize: uploadResult.metadata.size,
     contentType: uploadResult.metadata.contentType,
