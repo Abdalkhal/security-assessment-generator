@@ -19,6 +19,26 @@ const EVIDENCE_COLLECTION = 'evidence';
 const MAX_IMAGE_DIMENSION = 1600;
 const IMAGE_QUALITY = 0.7;
 
+// Reads a local file:// URI into a real, native-backed Blob via
+// XMLHttpRequest instead of fetch(). Confirmed on-device (via the
+// [evidence] logging below) that Expo's custom fetch polyfill
+// ("expo/src/winter/fetch") cannot read local file:// URIs - it returns
+// a synthetic "File not found" text response instead of the file's
+// content, with no error thrown anywhere in the chain. Plain XHR with
+// responseType 'blob' bypasses that polyfill and uses React Native's
+// core networking directly - this is also Firebase's own long-standing
+// documented pattern for reading local files on React Native.
+function readLocalFileAsBlob(uri: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload = () => resolve(xhr.response as Blob);
+    xhr.onerror = () => reject(new Error('Failed to read local file'));
+    xhr.responseType = 'blob';
+    xhr.open('GET', uri, true);
+    xhr.send(null);
+  });
+}
+
 export async function getEvidenceForFinding(ownerId: string, findingId: string): Promise<Evidence[]> {
   const q = query(
     collection(db, EVIDENCE_COLLECTION),
@@ -66,25 +86,8 @@ export async function createScreenshotEvidence(
     { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
   );
 
-  // Diagnostic logging (see [evidence] console lines) proved, in order:
-  // - fetch(uri).blob(): no error, but never confirmed byte-accurate.
-  // - Raw ArrayBuffer/typed-array passed to uploadBytes/uploadString:
-  //   Firebase internally does `new Blob([bytes])`, which React Native's
-  //   built-in Blob rejects for ArrayBuffer/typed-array input.
-  // - expo-file-system's new `File(uri).arrayBuffer()`: silently resolved
-  //   to `undefined` on this device - no error, but uploaded garbage.
-  // - expo-file-system legacy base64 read + expo-blob's Blob: read and
-  //   wrapped the bytes correctly (confirmed via logging: local size and
-  //   blob.size both matched the real ~229KB file) but Firebase's
-  //   uploadBytes still only transmitted 9 bytes server-side - so
-  //   Firebase's SDK does not correctly read data out of an expo-blob
-  //   Blob, despite it looking like a valid Blob.
-  // Back to fetch(uri).blob() - the one combination that has never thrown
-  // an error at any stage - now with the same size logging at every step
-  // to confirm byte-accuracy instead of assuming it.
-  const response = await fetch(manipulated.uri);
-  const blob = await response.blob();
-  console.log('[evidence] blob from fetch', { size: blob.size, type: blob.type });
+  const blob = await readLocalFileAsBlob(manipulated.uri);
+  console.log('[evidence] blob from XHR', { size: blob.size, type: blob.type });
 
   const evidenceRef = doc(collection(db, EVIDENCE_COLLECTION));
   const storagePath = `users/${ownerId}/assessments/${assessmentId}/findings/${findingId}/evidence/${evidenceRef.id}.jpg`;
