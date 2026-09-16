@@ -87,16 +87,11 @@ export async function createScreenshotEvidence(
   );
 
   const blob = await readLocalFileAsBlob(manipulated.uri);
-  console.log('[evidence] blob from XHR', { size: blob.size, type: blob.type });
 
   const evidenceRef = doc(collection(db, EVIDENCE_COLLECTION));
   const storagePath = `users/${ownerId}/assessments/${assessmentId}/findings/${findingId}/evidence/${evidenceRef.id}.jpg`;
   const storageRef = ref(storage, storagePath);
-  const uploadResult = await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
-  console.log('[evidence] upload result', {
-    serverSize: uploadResult.metadata.size,
-    contentType: uploadResult.metadata.contentType,
-  });
+  await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
 
   await setDoc(evidenceRef, {
     type: 'SCREENSHOT',
@@ -121,9 +116,7 @@ export async function createScreenshotEvidence(
 export async function getEvidenceImageDataUri(storagePath: string): Promise<string> {
   const storageRef = ref(storage, storagePath);
   const bytes = new Uint8Array(await getBytes(storageRef));
-  console.log('[evidence] downloaded bytes for display', { byteLength: bytes.byteLength, first8: Array.from(bytes.slice(0, 8)) });
   const base64 = bytesToBase64(bytes);
-  console.log('[evidence] base64 encoded', { length: base64.length, prefix: base64.slice(0, 20) });
   return `data:image/jpeg;base64,${base64}`;
 }
 
