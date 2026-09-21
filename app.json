@@ -37,11 +37,18 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to attach evidence screenshots.",
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to capture evidence photos."
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to capture evidence photos.",
+          "microphonePermission": false
         }
       ],
       "expo-sharing",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "865d4d06-83e4-493e-9758-2dc265d68a25"
+      }
+    },
+    "owner": "khaliqedan"
   }
 }

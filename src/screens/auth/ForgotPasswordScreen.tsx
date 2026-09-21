@@ -35,7 +35,10 @@ export function ForgotPasswordScreen({ navigation }: Props) {
       await resetPassword(email);
       setSent(true);
     } catch (err: any) {
-      setFormError(getFirebaseAuthErrorMessage(err?.code ?? ''));
+      console.error('[auth] reset password failed', err);
+      const mapped = getFirebaseAuthErrorMessage(err?.code ?? '');
+      const detail = err?.code ? ` (${err.code})` : err?.message ? `: ${err.message}` : '';
+      setFormError(`${mapped}${detail}`);
     } finally {
       setLoading(false);
     }

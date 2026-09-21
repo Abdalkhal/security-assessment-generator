@@ -34,7 +34,10 @@ export function LoginScreen({ navigation }: Props) {
     try {
       await loginWithEmail(email, password);
     } catch (err: any) {
-      setFormError(getFirebaseAuthErrorMessage(err?.code ?? ''));
+      console.error('[auth] login failed', err);
+      const mapped = getFirebaseAuthErrorMessage(err?.code ?? '');
+      const detail = err?.code ? ` (${err.code})` : err?.message ? `: ${err.message}` : '';
+      setFormError(`${mapped}${detail}`);
     } finally {
       setLoading(false);
     }

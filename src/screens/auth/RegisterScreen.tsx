@@ -44,7 +44,10 @@ export function RegisterScreen({ navigation }: Props) {
     try {
       await registerWithEmail(name, email, password);
     } catch (err: any) {
-      setFormError(getFirebaseAuthErrorMessage(err?.code ?? ''));
+      console.error('[auth] register failed', err);
+      const mapped = getFirebaseAuthErrorMessage(err?.code ?? '');
+      const detail = err?.code ? ` (${err.code})` : err?.message ? `: ${err.message}` : '';
+      setFormError(`${mapped}${detail}`);
     } finally {
       setLoading(false);
     }
