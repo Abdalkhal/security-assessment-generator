@@ -48,8 +48,15 @@ Screens implemented so far are listed under [Project Status](#project-status).
 
 ## Screenshots
 
-_Added as the UI is built out. See [Project Status](#project-status) for what's currently
-implemented._
+Captured on a physical Android device (dark theme, sample data only).
+
+| Sign in | Dashboard | Clients |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/01-login.jpg" width="240" alt="Sign in screen"> | <img src="docs/screenshots/02-dashboard.jpg" width="240" alt="Dashboard with risk overview, recent assessments and findings"> | <img src="docs/screenshots/03-clients.jpg" width="240" alt="Clients list"> |
+
+| New client | Assessment detail | New finding |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/06-new-client.jpg" width="240" alt="New client form"> | <img src="docs/screenshots/04-assessment-detail.jpg" width="240" alt="Assessment overview"> | <img src="docs/screenshots/05-new-finding.jpg" width="240" alt="New finding form with CVSS, CWE and OWASP fields"> |
 
 ## Technology Stack
 
@@ -218,12 +225,14 @@ Being built incrementally. Current stage:
       users/plan locked from client writes), unit tests for pure report/risk
       logic, `expo-doctor` clean (21/21), EAS build profiles
 
-All seven stages of the planned MVP are now in place. What's left before a
-real user can walk the full golden path is **connecting a real Firebase
-project** (see [Firebase Setup](#firebase-setup)) — every screen, security
-rule, and service function is implemented and type-checks cleanly, but has
-only been exercised against a placeholder project in this environment
-(no Android SDK/emulator was available in this environment; see
-[Local Development](#local-development)). Test thoroughly against your own
-Firebase project and a real Android device (via Expo Go) before relying on
-this for actual client engagements.
+All seven stages of the planned MVP are in place and have been validated end to end
+on a physical Android device against a real Firebase project (register, login, client,
+assessment, scope/assets, finding, screenshot evidence, report preview, PDF generation
+and sharing, report history, profile, edit/delete), including as a standalone APK built
+with EAS Build. Not yet done: iOS testing and Google Play publishing. To run it against
+your own backend, follow [Firebase Setup](#firebase-setup), and test with your own
+Firebase project before relying on it for real client engagements.
+
+## License
+
+Released under the [MIT License](LICENSE).
